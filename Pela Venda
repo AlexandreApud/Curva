@@ -1,0 +1,46 @@
+-- Usando PortoBI1
+USE PortoBI1;
+
+-- CTE para calcular o total de vendas (Subquery)
+WITH TotalVenda AS (
+    SELECT 
+        Loja,
+        SUM([Venda(R$)]) AS Venda
+    FROM 
+        Analitico_Venda
+    WHERE 
+        Data BETWEEN '2024-07-01' AND '2024-12-31'
+    GROUP BY 
+        Loja
+)
+
+-- Seleção e agregação de dados
+SELECT 
+    Loja,
+    [Código Interno],
+    Produto,
+    SUM([Venda(R$)]) AS Venda,
+    SUM([Venda(R$)]) / COUNT(DISTINCT Data) AS [Venda Média],
+    SUM(Quantidade) AS Qtd,
+    SUM(Quantidade) / COUNT(DISTINCT Data) AS [Qtd Média],
+    COUNT(DISTINCT Data) AS [Dias Vendidos],
+    SUM([Venda(R$)]) / (SELECT Venda FROM TotalVenda WHERE TotalVenda.Loja = Analitico_Venda.Loja) * 100 AS [Participacao Venda],
+    CASE 
+        WHEN SUM([Venda(R$)]) / (SELECT Venda FROM TotalVenda WHERE TotalVenda.Loja = Analitico_Venda.Loja) * 100 >= 0.4 THEN 'A1'
+        WHEN SUM([Venda(R$)]) / (SELECT Venda FROM TotalVenda WHERE TotalVenda.Loja = Analitico_Venda.Loja) * 100 >= 0.35 THEN 'A2'
+        WHEN SUM([Venda(R$)]) / (SELECT Venda FROM TotalVenda WHERE TotalVenda.Loja = Analitico_Venda.Loja) * 100 >= 0.3 THEN 'A3'
+        WHEN SUM([Venda(R$)]) / (SELECT Venda FROM TotalVenda WHERE TotalVenda.Loja = Analitico_Venda.Loja) * 100 >= 0.25 THEN 'B1'
+        WHEN SUM([Venda(R$)]) / (SELECT Venda FROM TotalVenda WHERE TotalVenda.Loja = Analitico_Venda.Loja) * 100 >= 0.2 THEN 'B2'
+        WHEN SUM([Venda(R$)]) / (SELECT Venda FROM TotalVenda WHERE TotalVenda.Loja = Analitico_Venda.Loja) * 100 >= 0.15 THEN 'B3'
+        WHEN SUM([Venda(R$)]) / (SELECT Venda FROM TotalVenda WHERE TotalVenda.Loja = Analitico_Venda.Loja) * 100 >= 0.1 THEN 'C1'
+        WHEN SUM([Venda(R$)]) / (SELECT Venda FROM TotalVenda WHERE TotalVenda.Loja = Analitico_Venda.Loja) * 100 >= 0.05 THEN 'C2'
+        ELSE 'C3'
+    END AS [Classificacao]
+FROM 
+    Analitico_Venda
+WHERE 
+    Data BETWEEN '2024-07-01' AND '2024-12-31'
+GROUP BY 
+    Loja, [Código Interno], Produto
+ORDER BY 
+    Loja, [Código Interno], Venda DESC;-- Write your own SQL object definition here, and it'll be included in your package.

@@ -1,0 +1,41 @@
+SELECT
+    t.Loja,
+    t.[Codigo Interno],
+    t.produto,
+    t.Classificaçao,
+    a.Recorrencia,
+    a.Corredor,
+    MAX(p.Data) AS [Ultimo Dia de Venda],
+    DATEADD(DAY, -1, CAST(GETDATE() AS DATE)) AS [Dia em D-1],
+    DATEDIFF(DAY, MAX(p.Data), DATEADD(DAY, -1, CAST(GETDATE() AS DATE))) AS [Dias Sem Venda],
+    o.Estoque,
+	u.[Status]
+FROM
+    PortoBI1.dbo.Produtos_Curva AS t
+LEFT JOIN
+    PortoBI1.Dbo.Ressuprimento AS a
+    ON t.[Codigo Interno] = a.[Codigo Interno]
+	AND t.Loja = a.Loja
+LEFT JOIN
+    PortoBI1.dbo.Analitico_Venda AS p
+    ON t.[Codigo Interno] = p.[Código Interno]
+	AND t.Loja = p.Loja
+LEFT JOIN
+    PortoBI1.dbo.Estoque AS o
+    ON t.[Codigo Interno] = o.[Codigo Interno]
+    AND t.Loja = o.Loja
+Left Join
+	PortoBI1.dbo.tabela_Auxiliar as u
+	on t.[Codigo Interno] = u.[Codigo Interno]
+GROUP BY
+    t.Loja,
+    t.[Codigo Interno],
+    t.produto,
+    t.Classificaçao,
+    a.Recorrencia,
+    a.Corredor,
+    o.Estoque,
+	u.[Status]
+ORDER BY
+    t.Loja, t.Classificaçao;
+

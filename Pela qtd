@@ -1,0 +1,78 @@
+Use PortoBI1;
+WITH QtdTotal AS (
+    SELECT
+        loja,
+        SUM(quantidade) AS TotalQtd
+    FROM 
+        Analitico_Venda
+    WHERE
+        data BETWEEN '2024-07-01' AND '2024-12-31'
+    GROUP BY
+        loja
+),
+ProdutoQtd AS (
+    SELECT
+        loja,
+        [Código Interno],
+        produto,
+        SUM(quantidade) AS quantidade_total
+    FROM 
+        Analitico_Venda
+    WHERE 
+        data BETWEEN '2024-07-01' AND '2024-12-31'
+    GROUP BY 
+        loja,[Código Interno], produto
+),
+DiasVenda AS (
+    SELECT 
+        loja,
+        produto,
+        COUNT(DISTINCT data) AS DiasVendidos
+    FROM 
+        Analitico_Venda
+    WHERE 
+        data BETWEEN '2024-07-01' AND '2024-12-31'
+    GROUP BY 
+        loja, produto
+)
+SELECT 
+    p.loja,
+    [Código Interno],
+    p.produto,
+    p.quantidade_total,
+    SUM(p.quantidade_total) OVER (PARTITION BY p.loja ORDER BY p.quantidade_total DESC) AS quantidade_acumulada,
+    (SUM(p.quantidade_total) OVER (PARTITION BY p.loja ORDER BY p.quantidade_total DESC) / q.TotalQtd) AS percentual_acumulado,
+    d.DiasVendidos,
+    (DATEDIFF(DAY, '2024-07-01', '2024-12-31') + 1) - d.DiasVendidos AS DiasSemVenda,
+    CASE 
+        WHEN (SUM(p.quantidade_total) OVER (PARTITION BY p.loja ORDER BY p.quantidade_total DESC) / q.TotalQtd) <= 0.25 THEN 'A1'
+        WHEN (SUM(p.quantidade_total) OVER (PARTITION BY p.loja ORDER BY p.quantidade_total DESC) / q.TotalQtd) > 0.25 AND 
+             (SUM(p.quantidade_total) OVER (PARTITION BY p.loja ORDER BY p.quantidade_total DESC) / q.TotalQtd) <= 0.40 THEN 'A2'
+        WHEN (SUM(p.quantidade_total) OVER (PARTITION BY p.loja ORDER BY p.quantidade_total DESC) / q.TotalQtd) > 0.40 AND 
+             (SUM(p.quantidade_total) OVER (PARTITION BY p.loja ORDER BY p.quantidade_total DESC) / q.TotalQtd) <= 0.50 THEN 'A3'
+        WHEN (SUM(p.quantidade_total) OVER (PARTITION BY p.loja ORDER BY p.quantidade_total DESC) / q.TotalQtd) > 0.50 AND 
+             (SUM(p.quantidade_total) OVER (PARTITION BY p.loja ORDER BY p.quantidade_total DESC) / q.TotalQtd) <= 0.70 THEN 'B1'
+        WHEN (SUM(p.quantidade_total) OVER (PARTITION BY p.loja ORDER BY p.quantidade_total DESC) / q.TotalQtd) > 0.70 AND 
+             (SUM(p.quantidade_total) OVER (PARTITION BY p.loja ORDER BY p.quantidade_total DESC) / q.TotalQtd) <= 0.80 THEN 'B2'
+        WHEN (SUM(p.quantidade_total) OVER (PARTITION BY p.loja ORDER BY p.quantidade_total DESC) / q.TotalQtd) > 0.80 AND 
+             (SUM(p.quantidade_total) OVER (PARTITION BY p.loja ORDER BY p.quantidade_total DESC) / q.TotalQtd) <= 0.90 THEN 'B3'
+        WHEN (SUM(p.quantidade_total) OVER (PARTITION BY p.loja ORDER BY p.quantidade_total DESC) / q.TotalQtd) > 0.90 AND 
+             (SUM(p.quantidade_total) OVER (PARTITION BY p.loja ORDER BY p.quantidade_total DESC) / q.TotalQtd) <= 0.95 THEN 'C1'
+        WHEN (SUM(p.quantidade_total) OVER (PARTITION BY p.loja ORDER BY p.quantidade_total DESC) / q.TotalQtd) > 0.95 AND 
+             (SUM(p.quantidade_total) OVER (PARTITION BY p.loja ORDER BY p.quantidade_total DESC) / q.TotalQtd) <= 0.98 THEN 'C2'
+        WHEN (SUM(p.quantidade_total) OVER (PARTITION BY p.loja ORDER BY p.quantidade_total DESC) / q.TotalQtd) > 0.98 AND 
+             (SUM(p.quantidade_total) OVER (PARTITION BY p.loja ORDER BY p.quantidade_total DESC) / q.TotalQtd) <= 1.00 THEN 'C3'
+    END AS classificacao
+FROM 
+    ProdutoQtd p
+INNER JOIN 
+    QtdTotal q
+ON 
+    p.loja = q.loja
+INNER JOIN 
+    DiasVenda d
+ON 
+    p.loja = d.loja AND p.produto = d.produto
+ORDER BY
+    p.loja,
+    p.quantidade_total DESC;
